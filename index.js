@@ -15,40 +15,43 @@
  * limitations under the License.
  */
 
-const yargs = require('yargs');
+const yargsInteractive = require('yargs-interactive');
 const fs = require('fs');
-const path = require('path');
 const { spawn } = require('child_process');
+const MemoryStream = require('memorystream');
+const path = require('path');
 
 const ALLOW_EXISTING_FILES = new Set(['.git', '.gitignore', 'LICENSE', 'README.md']);
-const DEFAULT_TEMPLATE = 'vanilla';
+const DEFAULT_TEMPLATE = 'react';
 
-yargs
-  .command(['init <dir>', '$0'], 'Start a test', yargs => {
-    yargs.option('template', {
-      description: 'template',
-      choices: ['', 'react', 'vanilla'],
-      default: '',
-      alias: 't',
-    });
-  }, init)
-  .help()
-  .argv;
+console.log(`🔥 You're going to try out Firebase!`);
+yargsInteractive()
+  .usage("$0 <dir>")
+  .interactive({
+    dir: {
+      type: "input",
+      default: "./firebase-demo",
+      describe: "Enter a directory to put your sample project",
+      prompt: "if-no-arg"
+    },
+    interactive: { default: true },
+  })
+  .then(result => {
+    init({ dir: result.dir });
+  });
+
 
 /**
  * Initialize a new plugin in the current folder
  */
 async function init({ dir, template }) {
-  if (!template) {
-    template = DEFAULT_TEMPLATE;
-  }
+  template = template || DEFAULT_TEMPLATE;
 
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  // const templateDir = path.resolve(__dirname, 'init-templates', template);
-  // const templateCommandDir = path.resolve(templateDir, 'command-template');
+  const templateDir = path.resolve(__dirname, 'init-templates', template);
 
   process.chdir(dir);
   for (let f of fs.readdirSync('.')) {
@@ -60,46 +63,81 @@ async function init({ dir, template }) {
     process.exit(1);
   }
 
-  const templateRepo = 'https://github.com/romannurik/try-firebase-demo';
-
   try {
-    console.log(`🐣 Setting up template in directory "${dir}"...`);
-    await $(`git clone ${templateRepo} .`);
-    console.log('📦 Installing dependencies...');
-    await $('npm install');
+    console.log(`🐣 Cloning template in directory "${dir}"...`);
+    execTemplateDir(templateDir, '.', {});
+    console.log('📦 Installing npm dependencies...');
+    await $('npm install --quiet', { silent: true });
     console.log(`📦 Starting up Firebase emulators and demo web server.`);
-    await $('npm start');
-  // 🔧 To start up after you're done:
-  
-  //     $ cd ${dir}
-  //     $ npm start
-  // `);
+    $('npm start', { silent: true });
+    console.log(`✅ Open these URLs in your browser:
+
+  http://localhost:8000 (Your demo app!)
+  http://localhost:4000 (Firebase Emulator UI)
+`);
   } catch (e) {
-    console.error(`❗️ Error setting up the demo environment: ${e}`);
+    console.error(`❗️ Error setting up the demo: ${e}`);
   }
 }
 
 /**
  * Runs a shell command with options, returns a promise.
  */
-function $(cmd) {
+function $(cmd, options = {}) {
+  let { silent, env } = options;
   return new Promise((resolve, reject) => {
     let args = cmd.split(/\s+/);
     let child;
+    let memStream = silent
+      ? new MemoryStream(['ErrorOutput', ' '])
+      : null;
     try {
       child = spawn(args[0], args.slice(1), {
-        stdio: 'inherit',
+        stdio: silent
+          ? ['ignore', 'ignore', 'pipe']
+          : 'inherit',
         env: {
           ...process.env,
-          PORT: 8000,
+          ...(env || {}),
         }
       });
+      if (silent) {
+        child.stderr.pipe(memStream);
+      }
     } catch (e) {
-      throw new Error(`Error running "${cmd}"`);
+      if (silent) {
+        memStream.pipe(process.stderr);
+      }
+      throw new Error(`Error running "${cmd}": ${e}`);
     }
     child.on('error', e => reject(`Command "${cmd}" failed (${e.toString()})`));
     child.on('exit', code => {
+      if (silent && code !== 0) {
+        memStream.pipe(process.stderr);
+      }
       (code === 0 ? resolve : reject)(code)
     });
   });
+}
+
+/**
+ * Instantiates a copy of all files in the given template directory to the
+ * given output directory.
+ */
+function execTemplateDir(templateDir, destDir, templateVars) {
+  for (let file of fs.readdirSync(templateDir)) {
+    let f = path.resolve(templateDir, file);
+    if (fs.statSync(f).isDirectory()) {
+      let subdirDest = path.resolve(destDir, file);
+      fs.mkdirSync(subdirDest);
+      execTemplateDir(
+        path.resolve(templateDir, file),
+        subdirDest,
+        templateVars)
+      continue;
+    }
+    let s = fs.readFileSync(f, { encoding: 'utf-8' });
+    s = s.replace(/%%(\w+)%%/g, (_, k) => templateVars[k] || '');
+    fs.writeFileSync(path.resolve(destDir, file), s);
+  }
 }

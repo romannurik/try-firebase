@@ -1,0 +1,1 @@
+A little experiment in quickly trying out Firebase with the local emulators suite.

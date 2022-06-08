@@ -24,7 +24,7 @@ const path = require('path');
 const ALLOW_EXISTING_FILES = new Set(['.git', '.gitignore', 'LICENSE', 'README.md']);
 const DEFAULT_TEMPLATE = 'react';
 
-console.log(`🔥 You're going to try out Firebase!`);
+console.log(`🔥 You're trying out Firebase, entirely on your local computer!`);
 yargsInteractive()
   .usage("$0 <dir>")
   .interactive({
@@ -68,12 +68,14 @@ async function init({ dir, template }) {
     execTemplateDir(templateDir, '.', {});
     console.log('📦 Installing npm dependencies...');
     await $('npm install --quiet', { silent: true });
-    console.log(`📦 Starting up Firebase emulators and demo web server.`);
+    console.log(`🏃‍♂️ Starting up Firebase emulators and demo web server.`);
     $('npm start', { silent: true });
     console.log(`✅ Open these URLs in your browser:
 
-  http://localhost:8000 (Your demo app!)
+  http://localhost:8000 (The demo app!)
   http://localhost:4000 (Firebase Emulator UI)
+
+👀 When you're ready, check out the code in "${dir}"!
 `);
   } catch (e) {
     console.error(`❗️ Error setting up the demo: ${e}`);

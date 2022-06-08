@@ -1,6 +1,6 @@
 {
   "name": "try-firebase",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Quickly spin up a local Firebase sample app with emulator",
   "bin": "index.js",
   "engines": {
@@ -9,11 +9,9 @@
   "dependencies": {
     "memorystream": "^0.3.1",
     "tmp": "^0.2.1",
-    "yargs": "^17.0.1"
+    "yargs": "^17.0.1",
+    "yargs-interactive": "^3.0.1"
   },
   "author": "Roman Nurik <roman@nurik.net>",
-  "license": "Apache-2.0",
-  "devDependencies": {
-    "yargs-interactive": "^3.0.1"
-  }
+  "license": "Apache-2.0"
 }

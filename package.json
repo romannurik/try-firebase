@@ -1,6 +1,6 @@
 {
   "name": "try-firebase",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Quickly spin up a local Firebase sample app with emulator",
   "bin": "index.js",
   "engines": {
